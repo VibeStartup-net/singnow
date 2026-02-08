@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow authenticated users to create and manage rooms
+    match /rooms/{roomId} {
+      // Anyone can read rooms (guests need to see the queue)
+      allow read: if true;
+      
+      // Only authenticated users can create rooms
+      allow create: if request.auth != null;
+      
+      // Guest/Host update rules:
+      // 1. Any update is allowed (needed for queue/guests management by guests)
+      // 2. BUT specific critical fields cannot be changed by guests:
+      //    - hostId must remaining the same
+      //    - createdAt must remain the same
+      allow update: if request.resource.data.hostId == resource.data.hostId &&
+                       request.resource.data.createdAt == resource.data.createdAt;
+      
+      // Only host can delete
+      allow delete: if request.auth != null && request.auth.uid == resource.data.hostId;
+    }
+  }
+}
